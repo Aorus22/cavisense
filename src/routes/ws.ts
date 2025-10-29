@@ -62,7 +62,16 @@ export function useWebSocket() {
 
     const resolveWebSocketUrl = () => {
       const explicit = (import.meta.env.VITE_SENSOR_WS_URL ?? '').trim()
-      if (explicit.length > 0) return explicit
+      if (explicit.length > 0) {
+        // If explicit URL starts with http://, convert to ws://
+        // If starts with https://, convert to wss://
+        if (explicit.startsWith('http://')) {
+          return 'ws://' + explicit.slice(7)
+        } else if (explicit.startsWith('https://')) {
+          return 'wss://' + explicit.slice(8)
+        }
+        return explicit
+      }
 
       const portOverride = (import.meta.env.VITE_SENSOR_WS_PORT ?? '').trim()
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
