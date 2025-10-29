@@ -1,0 +1,46 @@
+services:
+  # postgres:
+  #   image: postgres:15-alpine
+  #   container_name: cavisense-postgres
+  #   environment:
+  #     POSTGRES_DB: cavisense
+  #     POSTGRES_USER: cavisense
+  #     POSTGRES_PASSWORD: cavisense123
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - cavisense-postgres-data:/var/lib/postgresql/data
+  #   restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: cavisense-redis
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:-cavisense}"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - cavisense-redis-data:/data
+    environment:
+      - REDIS_PASSWORD=cavisense
+    restart: unless-stopped
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cavisense-app
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      # - DATABASE_URL=postgresql://${POSTGRES_USER:-cavisense}:${POSTGRES_PASSWORD:-cavisense123}@postgres:5432/cavisense
+      - REDIS_URL=redis://:cavisense@redis:6379
+      - PORT=3000
+    depends_on:
+      - redis
+      # - postgres
+    restart: unless-stopped
+
+volumes:
+  cavisense-redis-data:
+  # cavisense-postgres-data:

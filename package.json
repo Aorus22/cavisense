@@ -4,8 +4,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev --port 3000",
-    "build": "vite build",
-    "serve": "vite preview",
+    "build": "vite build && node scripts/create-server-entry.js",
+    "serve": "dotenv -e .env.local -- node dist/server/index.js",
     "test": "vitest run",
     "post-cta-init": "npx create-db@latest",
     "db:generate": "dotenv -e .env.local -- prisma generate",
