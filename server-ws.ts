@@ -8,8 +8,18 @@ export type SensorPayload = {
 }
 
 const SENSOR_REDIS_KEY = process.env.REDIS_SENSOR_KEY ?? 'sensor:latest'
+const SENSOR_CHANNEL = process.env.REDIS_SENSOR_CHANNEL ?? 'sensor_updates'
 
+// Redis client untuk operasi normal (get/set)
 const redis = new Redis({
+  host: process.env.REDIS_HOST ?? '127.0.0.1',
+  port: Number(process.env.REDIS_PORT ?? 6379),
+  username: process.env.REDIS_USERNAME || undefined,
+  password: process.env.REDIS_PASSWORD || undefined,
+})
+
+// Redis subscriber untuk pub/sub
+const redisSubscriber = new Redis({
   host: process.env.REDIS_HOST ?? '127.0.0.1',
   port: Number(process.env.REDIS_PORT ?? 6379),
   username: process.env.REDIS_USERNAME || undefined,
@@ -47,7 +57,7 @@ function setupWebSocketConnections() {
   })
 }
 
-export function broadcastSensorUpdate(payload: SensorPayload) {
+function broadcastSensorUpdate(payload: SensorPayload) {
   if (!connectedClients.size) {
     return
   }
@@ -97,10 +107,53 @@ export async function getLatestSensorPayload(): Promise<SensorPayload | null> {
   }
 }
 
+// Setup Redis pub/sub subscriber
+function setupRedisSubscriber() {
+  // Subscribe ke channel sensor_updates
+  redisSubscriber.subscribe(SENSOR_CHANNEL, (err, count) => {
+    if (err) {
+      console.error('[redis] Failed to subscribe to channel:', err)
+      return
+    }
+    console.log(`[redis] Subscribed to ${count} channel(s): ${SENSOR_CHANNEL}`)
+  })
+
+  // Handle message dari channel
+  redisSubscriber.on('message', async (channel, message) => {
+    if (channel !== SENSOR_CHANNEL) return
+
+    try {
+      const payload: SensorPayload = JSON.parse(message)
+      console.log('[redis] Received sensor update from pub/sub')
+
+      // Persist ke Redis dan broadcast ke WebSocket clients
+      await persistLatestSensorPayload(payload)
+      broadcastSensorUpdate(payload)
+    } catch (error) {
+      console.error('[redis] Failed to process pub/sub message:', error)
+    }
+  })
+
+  redisSubscriber.on('error', (error) => {
+    console.error('[redis-subscriber] Connection error:', error)
+  })
+}
+
+// Publish sensor update ke Redis channel
+export async function publishSensorUpdate(payload: SensorPayload) {
+  try {
+    await redis.publish(SENSOR_CHANNEL, JSON.stringify(payload))
+    console.log('[redis] Published sensor update to channel')
+  } catch (error) {
+    console.error('[redis] Failed to publish to channel:', error)
+  }
+}
+
 export function setupWebSocket(httpServer: HttpServer) {
   wss = new WebSocketServer({ server: httpServer, path: '/ws' })
   setupWebSocketConnections()
-  return { redis }
+  setupRedisSubscriber()
+  return { redis, redisSubscriber }
 }
 
 export function getConnectedClientsCount() {

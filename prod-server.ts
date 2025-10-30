@@ -5,12 +5,11 @@ import { createServer } from 'http'
 import cors from 'cors'
 // @ts-ignore
 import startServer from './dist/server/server.js'
-import { 
+import {
   setupWebSocket,
-  broadcastSensorUpdate, 
-  persistLatestSensorPayload,
+  publishSensorUpdate,
   getConnectedClientsCount,
-  type SensorPayload 
+  type SensorPayload
 } from './server-ws'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -24,7 +23,7 @@ const DIST_CLIENT = resolve(__dirname, 'dist', 'client')
 const httpServer = createServer(app)
 
 // ============ WebSocket Setup (same port as HTTP) ============
-const { redis } = setupWebSocket(httpServer)
+const { redis, redisSubscriber } = setupWebSocket(httpServer)
 
 // ============ HTTP/SSR Setup ============
 
@@ -50,8 +49,7 @@ app.post('/send-sensor-data', async (req, res) => {
       receivedAt: new Date().toISOString(),
     }
 
-    await persistLatestSensorPayload(normalizedPayload)
-    broadcastSensorUpdate(normalizedPayload)
+    await publishSensorUpdate(normalizedPayload)
 
     res.json({ status: 'ok' })
   } catch (error) {
@@ -132,5 +130,6 @@ process.on('SIGINT', () => {
   console.log('[server] Shutting down...')
   httpServer.close()
   redis.disconnect()
+  redisSubscriber.disconnect()
   process.exit(0)
 })
