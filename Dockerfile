@@ -1,36 +1,34 @@
-# Build stage
-FROM node:24-alpine AS builder
-
+# 1. Dependency Stage
+FROM oven/bun:alpine AS deps
 WORKDIR /app
 
-COPY package*.json ./
+COPY package.json bun.lock* ./
+RUN bun install --frozen-lockfile
 
-RUN npm ci
+# 2. Build Stage
+FROM oven/bun:alpine AS builder
+WORKDIR /app
 
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 ARG VITE_SENSOR_WS_URL
 ENV VITE_SENSOR_WS_URL=$VITE_SENSOR_WS_URL
 
-RUN npx prisma generate
+RUN bunx prisma generate
+RUN bun run build
 
-RUN npm run build
-
-# Production stage
-FROM node:24-alpine AS production
-
+# 3. Runtime Stage
+FROM oven/bun:alpine AS runner
 WORKDIR /app
 
-COPY package*.json ./
-
-RUN npm ci
+ENV NODE_ENV=production
+EXPOSE 3000
 
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/prod-server.ts ./
+COPY --from=builder /app/server-ws.ts ./
 
-EXPOSE 3000 3010
-
-ENV NODE_ENV=production
-
-CMD ["npm", "run", "serve"]
+CMD ["bun", "prod-server.ts"]
