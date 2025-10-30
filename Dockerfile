@@ -12,9 +12,6 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-ARG VITE_SENSOR_WS_URL
-ENV VITE_SENSOR_WS_URL=$VITE_SENSOR_WS_URL
-
 ENV RUNTIME=custom
 
 RUN bunx prisma generate

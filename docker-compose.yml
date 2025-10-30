@@ -16,8 +16,6 @@ services:
     image: redis:7-alpine
     container_name: cavisense-redis
     command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:-cavisense}"]
-    ports:
-      - "6379:6379"
     volumes:
       - cavisense-redis-data:/data
     environment:
@@ -28,15 +26,14 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        - VITE_SENSOR_WS_URL=${VITE_SENSOR_WS_URL:-ws://localhost:3000/ws}
     image: aorus22/cavisense:latest
     container_name: cavisense-app
     ports:
-      - "3000:3000"
+      - "7485:3000"
     environment:
       - NODE_ENV=production
       # - DATABASE_URL=postgresql://${POSTGRES_USER:-cavisense}:${POSTGRES_PASSWORD:-cavisense123}@postgres:5432/cavisense
+      - SENSOR_WS_URL=https://cavisense.alyza.site/ws
       - REDIS_URL=redis://:cavisense@redis:6379
       - REDIS_HOST=redis
       - REDIS_PORT=6379

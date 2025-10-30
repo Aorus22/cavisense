@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createServerFn } from '@tanstack/react-start'
 
 type ConnectionState = 'connecting' | 'open' | 'closed' | 'error'
 
@@ -46,6 +47,7 @@ export function useWebSocket() {
   const [latestSensorData, setLatestSensorData] = useState<SensorDataPayload | null>(null)
   const [connectionError, setConnectionError] = useState<string | null>(null)
   const [reconnectSignal, setReconnectSignal] = useState(0)
+  const [wsUrl, setWsUrl] = useState<string | null>(null)
 
   const handleManualReconnect = () => {
     setConnectionState('connecting')
@@ -60,29 +62,22 @@ export function useWebSocket() {
     let reconnectTimer: number | undefined
     let isDisposed = false
 
-    const resolveWebSocketUrl = () => {
-      const explicit = (import.meta.env.VITE_SENSOR_WS_URL ?? '').trim()
-      if (explicit.length > 0) {
-        // If explicit URL starts with http://, convert to ws://
-        // If starts with https://, convert to wss://
-        if (explicit.startsWith('http://')) {
-          return 'ws://' + explicit.slice(7)
-        } else if (explicit.startsWith('https://')) {
-          return 'wss://' + explicit.slice(8)
+    // Fetch the WS URL from server on mount
+    const fetchWsUrl = async () => {
+      try {
+        const url = await getSensorWsUrl()
+        if (!isDisposed) {
+          setWsUrl(url)
         }
-        return explicit
+      } catch (error) {
+        console.error('Failed to get WebSocket URL:', error)
+        if (!isDisposed) {
+          setConnectionError('Gagal mengambil URL WebSocket')
+        }
       }
-
-      const portOverride = (import.meta.env.VITE_SENSOR_WS_PORT ?? '').trim()
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-
-      if (portOverride.length > 0) {
-        const hostname = window.location.hostname
-        return `${protocol}//${hostname}:${portOverride}`
-      }
-
-      return `${protocol}//${window.location.host}/ws`
     }
+
+    fetchWsUrl()
 
     const scheduleReconnect = () => {
       if (isDisposed) return
@@ -93,14 +88,13 @@ export function useWebSocket() {
     }
 
     const connect = () => {
-      if (isDisposed) return
+      if (isDisposed || !wsUrl) return
 
-      const url = resolveWebSocketUrl()
       setConnectionState('connecting')
       setConnectionError(null)
 
       try {
-        socket = new WebSocket(url)
+        socket = new WebSocket(wsUrl)
       } catch (error) {
         console.error('WebSocket initialization failed:', error)
         setConnectionState('error')
@@ -144,7 +138,10 @@ export function useWebSocket() {
       })
     }
 
-    connect()
+    // Connect setelah wsUrl diterima
+    if (wsUrl) {
+      connect()
+    }
 
     return () => {
       isDisposed = true
@@ -153,7 +150,7 @@ export function useWebSocket() {
       }
       socket?.close()
     }
-  }, [reconnectSignal])
+  }, [reconnectSignal, wsUrl])
 
   return {
     connectionState,
@@ -162,3 +159,20 @@ export function useWebSocket() {
     handleManualReconnect,
   }
 }
+
+export const getSensorWsUrl = createServerFn({ method: 'GET' }).handler(async () => {
+  const explicit = (process.env.SENSOR_WS_URL ?? '').toString().trim()
+
+  if (explicit.length > 0) {
+    // Convert http/https to ws/wss if needed
+    if (explicit.startsWith('http://')) {
+      return 'ws://' + explicit.slice(7)
+    } else if (explicit.startsWith('https://')) {
+      return 'wss://' + explicit.slice(8)
+    }
+    return explicit
+  }
+
+  // Fallback: return default path
+  return 'ws://localhost:3000/ws'
+})
