@@ -224,10 +224,12 @@ function CaviSenseDashboard() {
 
         <Card className="bg-white">
           <CardContent className="pt-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-sm font-medium">WebSocket:</span>
-                <Badge className={`${connectionBadge.className} text-white px-2 py-1 text-xs`}>
+                <Badge
+                  className={`${connectionBadge.className} text-white px-2 py-1 text-xs max-w-40 truncate inline-block overflow-hidden whitespace-nowrap`}
+                >
                   {connectionBadge.label}
                 </Badge>
               </div>
@@ -235,7 +237,7 @@ function CaviSenseDashboard() {
                 onClick={handleManualReconnect}
                 disabled={connectionState === 'connecting'}
                 size="sm"
-                className="bg-blue-500 hover:bg-blue-600 text-white disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full sm:w-auto bg-blue-500 hover:bg-blue-600 text-white disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 Reconnect
               </Button>
@@ -245,18 +247,18 @@ function CaviSenseDashboard() {
 
         <Card className="border-4 border-green-500 bg-white">
           <CardContent className="pt-6">
-            <div className="grid grid-cols-3 divide-x">
-              <div className="text-center px-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 md:divide-x divide-y md:divide-y-0">
+                <div className="text-center px-4 py-4">
                 <p className="text-xs text-gray-500 uppercase mb-2">Status Unit</p>
                 <p className="text-3xl font-bold text-green-500 flex items-center justify-center gap-2">
                   <Circle className="fill-green-500 w-4 h-4" /> NORMAL
                 </p>
               </div>
-              <div className="text-center px-4">
+                <div className="text-center px-4 py-4">
                 <p className="text-xs text-gray-500 uppercase mb-2">Penyebab Status</p>
                 <p className="text-lg font-semibold text-green-600">Semua Parameter Aman</p>
               </div>
-              <div className="text-center px-4">
+                <div className="text-center px-4 py-4">
                 <p className="text-xs text-gray-500 uppercase mb-2">Proteksi Shutdown Otomatis</p>
                 <p className="text-3xl font-bold text-green-600">SIAGA</p>
               </div>
@@ -265,7 +267,7 @@ function CaviSenseDashboard() {
         </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-          <div className="lg:col-span-3 grid grid-cols-3 gap-4">
+          <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4">
             {[
               { label: 'Debit Aliran (L/s)', value: resolvedMetrics.flowRate, unit: 'L/s', color: '#3b82f6', maxValue: 100, index: 0 },
               { label: 'Total Head (M)', value: resolvedMetrics.totalHead, unit: 'm', color: '#f97316', maxValue: 200, index: 1 },
@@ -299,7 +301,7 @@ function CaviSenseDashboard() {
               </Card>
             ))}
 
-            <Card className="bg-white col-span-3">
+            <Card className="bg-white md:col-span-3 col-span-1">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm uppercase">Parameter Mesin Kritis</CardTitle>
               </CardHeader>
