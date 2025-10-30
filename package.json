@@ -5,19 +5,12 @@
   "scripts": {
     "dev": "vite dev --port 3000",
     "build": "vite build && tsc --noEmit",
-    "start": "vite start",
-    "serve": "concurrently \"npm run serve:websocket\" \"npm run serve:frontend\"",
-    "serve:websocket": "tsx websocket-server.ts",
-    "serve:frontend": "npm run build && tsx prod-server.ts",
-    "test": "vitest run",
-    "post-cta-init": "npx create-db@latest",
-    "db:generate": "prisma generate",
-    "db:push": "prisma db push",
-    "db:migrate": "prisma migrate dev",
-    "db:studio": "prisma studio",
-    "db:seed": "prisma db seed"
+    "start:node": "tsx prod-server.ts",
+		"start": "vite preview",
+    "test": "vitest run"
   },
   "dependencies": {
+    "@cloudflare/vite-plugin": "^1.13.17",
     "@prisma/client": "^6.16.3",
     "@radix-ui/react-slot": "^1.2.3",
     "@tailwindcss/vite": "^4.0.6",
@@ -66,7 +59,8 @@
     "typescript": "^5.7.2",
     "vite": "^7.1.7",
     "vitest": "^3.0.5",
-    "web-vitals": "^5.1.0"
+    "web-vitals": "^5.1.0",
+    "wrangler": "^4.45.2"
   },
   "prisma": {
     "seed": "ts-node seed.ts"

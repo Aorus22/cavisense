@@ -15,6 +15,8 @@ COPY . .
 ARG VITE_SENSOR_WS_URL
 ENV VITE_SENSOR_WS_URL=$VITE_SENSOR_WS_URL
 
+ENV RUNTIME=node
+
 RUN bunx prisma generate
 RUN bun run build
 
