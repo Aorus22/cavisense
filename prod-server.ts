@@ -6,9 +6,7 @@ import cors from 'cors'
 // @ts-ignore
 import startServer from './dist/server/server.js'
 import {
-  setupWebSocket,
-  publishSensorUpdate,
-  getConnectedClientsCount,
+  SensorServerManager,
   type SensorPayload
 } from './server-ws'
 
@@ -23,7 +21,7 @@ const DIST_CLIENT = resolve(__dirname, 'dist', 'client')
 const httpServer = createServer(app)
 
 // ============ WebSocket Setup (same port as HTTP) ============
-const { redis, redisSubscriber } = setupWebSocket(httpServer)
+const sensorServer = new SensorServerManager(httpServer)
 
 // ============ HTTP/SSR Setup ============
 
@@ -49,7 +47,8 @@ app.post('/send-sensor-data', async (req, res) => {
       receivedAt: new Date().toISOString(),
     }
 
-    await publishSensorUpdate(normalizedPayload)
+    // Publish ke Redis channel, subscriber akan handle persist & broadcast
+    await sensorServer.publishSensorUpdate(normalizedPayload)
 
     res.json({ status: 'ok' })
   } catch (error) {
@@ -60,7 +59,7 @@ app.post('/send-sensor-data', async (req, res) => {
 
 // Health check
 app.get('/health', (_, res) => {
-  res.json({ status: 'ok', wsClients: getConnectedClientsCount() })
+  res.json({ status: 'ok', wsClients: sensorServer.getConnectedClientsCount() })
 })
 
 // Serve static assets with aggressive caching
@@ -122,14 +121,9 @@ httpServer.listen(PORT, () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`)
 })
 
-redis.on('error', (error) => {
-  console.error('[redis] Connection error:', error)
-})
-
 process.on('SIGINT', () => {
   console.log('[server] Shutting down...')
   httpServer.close()
-  redis.disconnect()
-  redisSubscriber.disconnect()
+  sensorServer.shutdown()
   process.exit(0)
 })
